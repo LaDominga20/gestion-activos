@@ -9,8 +9,9 @@ export default function Registrar() {
   const router = useRouter();
   
   // Estado inicial - HE AGREGADO "area: ''" AQUÍ
-  const [formData, setFormData] = useState<Partial<InventoryItem>>({
+   const [formData, setFormData] = useState<Partial<InventoryItem>>({
     area: '', 
+    correlativo_interno: '', // <--- Agregar esto
     empresa: '',
     colaborador: '',
     gerencia: '',
@@ -18,6 +19,7 @@ export default function Registrar() {
     codigo: '',
     modelo: '',
     marca: '',
+    descripcion: '', // <--- Asegurar que exista
     proveedor: 'LEASING',
     estado: 'Activo',
     situacion_contrato: 'Vigente'
@@ -116,9 +118,24 @@ export default function Registrar() {
         </div>
 
         {/* Sección Dispositivo */}
+               {/* Sección Dispositivo */}
         <div>
             <h3 className="text-lg font-bold text-green-700 border-b mb-4">Información del Dispositivo</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                
+                {/* NUEVO: Correlativo Interno */}
+                <div>
+                    <label className="block text-sm font-medium mb-1">Correlativo Interno</label>
+                    <input 
+                        required 
+                        type="text" 
+                        className="w-full border rounded p-2" 
+                        placeholder="Ej: INT-2023-001"
+                        value={formData.correlativo_interno}
+                        onChange={e => setFormData({...formData, correlativo_interno: e.target.value})} 
+                    />
+                </div>
+
                 <div>
                     <label className="block text-sm font-medium mb-1">Código</label>
                     <input required type="text" className="w-full border rounded p-2" 
@@ -141,6 +158,18 @@ export default function Registrar() {
                     <label className="block text-sm font-medium mb-1">Procesador</label>
                     <input type="text" className="w-full border rounded p-2"
                         onChange={e => setFormData({...formData, procesador: e.target.value})} />
+                </div>
+
+                {/* NUEVO / MEJORADO: Descripción (Ocupa todo el ancho) */}
+                <div className="md:col-span-3">
+                    <label className="block text-sm font-medium mb-1">Descripción del Dispositivo</label>
+                    <textarea 
+                        rows={3}
+                        className="w-full border rounded p-2" 
+                        placeholder="Ej: Laptop color gris, 16GB RAM, SSD de 512GB..."
+                        value={formData.descripcion}
+                        onChange={e => setFormData({...formData, descripcion: e.target.value})} 
+                    />
                 </div>
             </div>
         </div>
