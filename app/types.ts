@@ -10,6 +10,7 @@ export interface InventoryItem {
   marca: string;
   procesador?: string;
   descripcion?: string;
+  correlativo_interno?: string;
   valor_sin_igv?: number;
   valor_con_igv?: number;
   tarifa?: number;
