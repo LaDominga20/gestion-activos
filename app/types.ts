@@ -1,3 +1,6 @@
+export type AssetStatus = 'Disponible' | 'Asignado' | 'Mantenimiento' | 'Baja';
+export type ContractStatus = 'Vigente' | 'Vencido' | 'Por Vencer' | 'Pendiente';
+
 export interface InventoryItem {
   id?: number;
   empresa: string;
@@ -16,9 +19,19 @@ export interface InventoryItem {
   tarifa?: number;
   proveedor?: string;
   sujeto_a?: string;
-  estado: string;
+  estado: AssetStatus;
   fecha_inicio: string;
   fecha_fin?: string;
-  situacion_contrato: string;
+  situacion_contrato: ContractStatus;
   firma?: string;
+}
+
+export interface ActivoPropio {
+  id?: number;
+  nombre: string;
+  marca: string;
+  tipo_dispositivo: string;
+  caracteristicas: string;
+  fecha_compra: string;
+  ubicacion: string;
 }
