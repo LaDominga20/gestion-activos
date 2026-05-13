@@ -26,6 +26,7 @@ export default function RootLayout({
             <nav className="p-4">
                 <Link href="/" className="block py-2 px-4 mb-2 hover:bg-green-50 rounded text-gray-700">📊 Dashboard</Link>
                 <Link href="/inventario" className="block py-2 px-4 mb-2 hover:bg-green-50 rounded text-gray-700">📦 Inventario</Link>
+                <Link href="/activos-propios" className="block py-2 px-4 mb-2 hover:bg-green-50 rounded text-gray-700">🏢 Activos Propios</Link>
                 <Link href="/registrar" className="block py-2 px-4 mb-2 hover:bg-green-50 rounded text-gray-700">➕ Registrar</Link>
             </nav>
           </aside>

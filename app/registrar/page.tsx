@@ -21,7 +21,7 @@ export default function Registrar() {
     marca: '',
     descripcion: '', // <--- Asegurar que exista
     proveedor: 'LEASING',
-    estado: 'Activo',
+    estado: 'Disponible',
     situacion_contrato: 'Vigente'
   });
 
