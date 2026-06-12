@@ -4,9 +4,29 @@ import { supabase } from '@/app/lib/supabase'
 import { InventoryItem } from '@/app/types'
 import SignatureCanvas from '@/app/components/SignatureCanvas';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/app/hooks/useAuth';
+
+const POLITICAS_EQUIPOS_TI = {
+  titulo: "POLÍTICA SOBRE USO Y RESPONSABILIDAD DE EQUIPOS ASIGNADOS POR LA EMPRESA",
+  contenido: [
+    { s: "I. OBJETIVO", d: "Establecer las condiciones de uso, cuidado y responsabilidad de los equipos asignados por la empresa a los trabajadores para el desempeño de sus funciones, así como los lineamientos aplicables en caso de pérdida, robo o avería." },
+    { s: "II. FINALIDAD", d: "Garantizar el uso adecuado y responsable de los equipos, protegiendo los activos de la empresa y estableciendo las responsabilidades del trabajador." },
+    { s: "III. ALCANCE", d: "Esta política se aplica a todos los trabajadores de PASTIRED que reciben equipos de la empresa (laptops, teléfonos móviles, etc.)." },
+    { s: "IV. FUNDAMENTO LEGAL", d: "Decreto Legislativo N.° 728 y Decreto Supremo N.° 003-97-TR (Ley de Productividad y Competitividad Laboral)." },
+    { s: "V. DEFINICIONES CLAVE", d: "Negligencia: Falta de cuidado del trabajador. Robo: Apropiación por terceros (requiere denuncia). Hurto: Apropiación ilícita sin violencia. Caso fortuito: Evento fuera del control del trabajador. Avería: Daño que afecta el funcionamiento." },
+    { s: "VI. RESPONSABLES", d: "Recursos Humanos gestiona la entrega y registro. Los Supervisores verifican el uso conforme a lineamientos. Los Trabajadores son responsables del uso exclusivo laboral y de reportar incidencias de inmediato." },
+    { s: "VII. LINEAMIENTOS DE ENTREGA", d: "Todo equipo se entrega previa revisión técnica y mediante la firma de un ACTA DE ENTREGA (Anexo 01), donde el trabajador reconoce el buen estado del bien." },
+    { s: "VIII. OBLIGACIONES DEL TRABAJADOR", d: "a) Uso exclusivo laboral. b) Uso diligente y responsable. c) Informar pérdida o daño de inmediato. d) No instalar software o realizar modificaciones no autorizadas." },
+    { s: "IX. RESPONSABILIDAD Y FALTAS", d: "En caso de robo/hurto: Denuncia policial en menos de 24h. Si se determina negligencia, el trabajador asume el costo proporcional de reposición. El daño por desgaste natural es asumido por la empresa." },
+    { s: "X. AUTORIZACIÓN DE DESCUENTO", d: "Mediante el registro de este activo, el trabajador otorga autorización expresa (Anexo 02) para efectuar descuentos en remuneración o beneficios sociales en caso de pérdida o daño por negligencia comprobada." },
+    { s: "XI. DISPOSICIONES FINALES", d: "El incumplimiento de esta política es considerado falta disciplinaria grave, pudiendo acarrear sanciones desde amonestaciones hasta la terminación del contrato." }
+  ],
+  anexo_compromiso: "CONFORMIDAD Y COMPROMISO: Declaro haber recibido el equipo y sus accesorios en perfecto estado de funcionamiento. Me comprometo a darles un uso adecuado, exclusivamente para fines laborales, y a devolverlos en las mismas condiciones al término de mi relación laboral o cuando la empresa lo requiera."
+};
 
 export default function Registrar() {
   const router = useRouter();
+  const { user, loading: authLoading, isAdmin } = useAuth();
   
   // Estado inicial - HE AGREGADO "area: ''" AQUÍ
    const [formData, setFormData] = useState<Partial<InventoryItem>>({
@@ -27,36 +47,100 @@ export default function Registrar() {
 
   const [signature, setSignature] = useState<string | null>(null);
   const [showPolicy, setShowPolicy] = useState(false);
+  const [policyAccepted, setPolicyAccepted] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+    if (!authLoading && user && !isAdmin()) {
+      router.push('/');
+    }
+  }, [authLoading, user, isAdmin, router]);
+
+  const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     if (!signature) {
       alert("Debe firmar la política de uso.");
       return;
     }
 
-    const { error } = await supabase.from('inventory').insert([{
-      ...formData,
-      firma: signature,
-      valor_sin_igv: Number(formData.valor_sin_igv),
-      valor_con_igv: Number(formData.valor_con_igv),
-      tarifa: Number(formData.tarifa)
-    }]);
+    if (!policyAccepted) {
+      alert("Debe marcar la casilla de conformidad con las políticas.");
+      return;
+    }
 
-    if (error) {
-      console.error(error);
-      alert("Error al registrar");
-    } else {
-      alert("Dispositivo registrado con éxito");
-      router.push('/inventario');
+    if (!user?.id) {
+      alert("No se detectó usuario autenticado. Vuelve a iniciar sesión.");
+      return;
+    }
+
+    const valorSin = Number(formData.valor_sin_igv ?? 0);
+    const tarifaNum = Number(formData.tarifa ?? 0);
+    const valorCon = Number(formData.valor_con_igv ?? valorSin * 1.18);
+
+    if (isNaN(valorSin) || isNaN(valorCon) || isNaN(tarifaNum)) {
+      alert("Por favor ingrese valores válidos para el valor y la tarifa.");
+      return;
+    }
+
+    const fechaInicio = formData.fecha_inicio || new Date().toISOString().slice(0, 10);
+
+    const payload = {
+      empresa: formData.empresa || '',
+      colaborador: formData.colaborador || '',
+      gerencia: formData.gerencia || '',
+      area: formData.area || '',
+      puesto: formData.puesto || '',
+      correlativo_interno: formData.correlativo_interno || '',
+      codigo: formData.codigo || '',
+      modelo: formData.modelo || '',
+      marca: formData.marca || '',
+      procesador: formData.procesador || null,
+      descripcion: formData.descripcion || null,
+      proveedor: formData.proveedor || 'LEASING',
+      estado: formData.estado || 'Disponible',
+      situacion_contrato: formData.situacion_contrato || 'Vigente',
+      valor_sin_igv: valorSin,
+      valor_con_igv: valorCon,
+      tarifa: tarifaNum,
+      fecha_inicio: fechaInicio,
+      firma: signature,
+      acepto_politicas: policyAccepted,
+      fecha_aceptacion_politica: new Date().toISOString(),
+      // Asegúrate de que estas columnas existan en la tabla 'inventory' de Supabase
+      // Si el error persiste, verifica si los nombres en la DB coinciden (ej. 'creado_por')
+      created_by: user.id, 
+      created_by_name: user.full_name || user.email || null,
+    };
+
+    try {
+      const { data, error } = await supabase
+        .from('inventory')
+        .insert([payload])
+        .select();
+
+      if (error) {
+        console.error("Supabase insert error:", JSON.stringify(error, null, 2));
+        console.error("Insert payload:", JSON.stringify(payload, null, 2));
+        alert("Error al registrar: " + (error.message || JSON.stringify(error)));
+      } else {
+        alert("Dispositivo registrado con éxito");
+        router.push('/inventario');
+      }
+    } catch (err: any) {
+      console.error("Exception during Supabase insert:", err);
+      alert("Error al registrar: " + (err?.message || JSON.stringify(err)));
     }
   };
 
-  // Función auxiliar para calc IGV
-  const calcIGV = (val: string) => {
-    const num = parseFloat(val) || 0;
-    setFormData(prev => ({ ...prev, valor_con_igv: num * 1.18 }));
-  };
+  if (authLoading || !user) {
+    return <div className="p-6 text-center">Cargando...</div>;
+  }
+
+  if (!isAdmin()) {
+    return <div className="p-6 text-center text-red-600">No tienes permiso para registrar dispositivos</div>;
+  }
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
@@ -180,24 +264,44 @@ export default function Registrar() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <label className="block text-sm font-medium mb-1">Valor Sin IGV</label>
-                    <input type="number" step="0.01" className="w-full border rounded p-2"
-                        onChange={e => { 
-                            const valor = e.target.value; 
-                            setFormData({...formData, valor_sin_igv: parseFloat(valor)}); 
-                            calcIGV(valor); 
-                        }} 
+                    <input
+                        required
+                        type="number"
+                        step="0.01"
+                        className="w-full border rounded p-2"
+                        value={formData.valor_sin_igv ?? ''}
+                        onChange={e => {
+                            const valor = e.target.value;
+                            const num = valor === '' ? 0 : parseFloat(valor);
+                            setFormData(prev => ({
+                                ...prev,
+                                valor_sin_igv: valor === '' ? undefined : num,
+                                valor_con_igv: num * 1.18
+                            }));
+                        }}
                     />
                 </div>
                 <div>
                     <label className="block text-sm font-medium mb-1">Valor Con IGV</label>
-                    <input readOnly type="number" className="w-full border rounded p-2 bg-gray-100" 
-                        value={formData.valor_con_igv ? formData.valor_con_igv.toFixed(2) : ''} 
+                    <input
+                        readOnly
+                        type="text"
+                        className="w-full border rounded p-2 bg-gray-100"
+                        value={formData.valor_con_igv !== undefined ? formData.valor_con_igv.toFixed(2) : ''}
                     />
                 </div>
                 <div>
                     <label className="block text-sm font-medium mb-1">Tarifa</label>
-                    <input required type="number" className="w-full border rounded p-2"
-                        onChange={e => setFormData({...formData, tarifa: parseFloat(e.target.value)})} 
+                    <input
+                        required
+                        type="number"
+                        step="0.01"
+                        className="w-full border rounded p-2"
+                        value={formData.tarifa ?? ''}
+                        onChange={e => setFormData({
+                            ...formData,
+                            tarifa: e.target.value === '' ? undefined : parseFloat(e.target.value),
+                        })}
                     />
                 </div>
             </div>
@@ -211,17 +315,47 @@ export default function Registrar() {
       {/* Modal Política */}
       {showPolicy && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
-            <div className="bg-white p-6 rounded-lg w-full max-w-lg h-[80vh] flex flex-col">
-                <h2 className="text-xl font-bold text-green-800 mb-4">Política de Uso</h2>
-                <div className="flex-1 overflow-y-auto bg-gray-50 p-4 border mb-4 text-sm">
-                    <p><strong>1. RESPONSABILIDAD:</strong> El colaborador es responsable del equipo...</p>
-                    <p className="mt-2"><strong>2. USO:</strong> Uso exclusivo empresarial...</p>
-                    <p className="mt-2"><strong>3. SEGURIDAD:</strong> Mantener credenciales seguras...</p>
+            <div className="bg-white p-6 rounded-lg w-full max-w-2xl h-[90vh] flex flex-col shadow-2xl">
+                <h2 className="text-xl font-bold text-green-800 mb-2">Documento de Política Interna</h2>
+                <div className="flex-1 overflow-y-auto bg-gray-50 p-6 border mb-4 text-sm rounded leading-relaxed text-gray-700">
+                    <h3 className="font-bold mb-4 text-center text-base underline decoration-green-600">{POLITICAS_EQUIPOS_TI.titulo}</h3>
+                    
+                    {POLITICAS_EQUIPOS_TI.contenido.map((item, idx) => (
+                        <p key={idx} className="mt-2">
+                            <strong className="text-green-800">{item.s}:</strong> {item.d}
+                        </p>
+                    ))}
+
+                    <div className="mt-6 p-4 bg-green-100 border-l-4 border-green-600 italic">
+                        {POLITICAS_EQUIPOS_TI.anexo_compromiso}
+                    </div>
                 </div>
+
+                <div className="mb-4 flex items-start gap-2 bg-yellow-50 p-3 rounded border border-yellow-200">
+                    <input 
+                        type="checkbox" 
+                        id="conformidad" 
+                        className="mt-1 h-4 w-4 text-green-600"
+                        checked={policyAccepted}
+                        onChange={(e) => setPolicyAccepted(e.target.checked)}
+                    />
+                    <label htmlFor="conformidad" className="text-sm text-gray-700">
+                        Doy fe de haber leído las políticas y me comprometo a cumplir con las normas de cuidado y uso del equipo asignado.
+                    </label>
+                </div>
+
                 <SignatureCanvas onSave={setSignature} disabled={false} />
                 <div className="flex gap-2 mt-4">
                     <button onClick={() => setShowPolicy(false)} className="flex-1 bg-gray-300 py-2 rounded">Cancelar</button>
-                    <button onClick={handleSubmit} className="flex-1 bg-green-600 text-white py-2 rounded">Confirmar Registro</button>
+                    <button 
+                        onClick={handleSubmit} 
+                        disabled={!policyAccepted || !signature}
+                        className={`flex-1 py-2 rounded font-bold transition-colors ${
+                            policyAccepted && signature ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                        }`}
+                    >
+                        Confirmar Registro
+                    </button>
                 </div>
             </div>
         </div>

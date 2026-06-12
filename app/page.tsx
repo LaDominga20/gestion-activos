@@ -1,16 +1,28 @@
 "use client";
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase'
 import { InventoryItem } from '@/app/types'
+import { useAuth } from '@/app/hooks/useAuth';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 export default function Dashboard() {
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [data, setData] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+  }, [authLoading, user, router]);
+
+  useEffect(() => {
+    if (user) {
+      fetchData();
+    }
+  }, [user]);
 
   const fetchData = async () => {
     const { data, error } = await supabase.from('inventory').select('*');
@@ -41,6 +53,10 @@ export default function Dashboard() {
     }, {} as Record<string, number>)
   ).map(([name, value]) => ({ name, value }));
   // -------------------------------------------------------------
+
+  if (authLoading || !user) {
+    return <div className="p-10 text-center">Cargando...</div>;
+  }
 
   if (loading) return <div className="p-10 text-center">Cargando Dashboard...</div>;
 

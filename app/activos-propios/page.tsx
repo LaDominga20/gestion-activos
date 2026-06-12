@@ -1,8 +1,12 @@
 "use client";
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { ActivoPropio } from '@/app/types';
+import { useAuth } from '@/app/hooks/useAuth';
 
 export default function ActivosPropios() {
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [activos, setActivos] = useState<ActivoPropio[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -23,7 +27,13 @@ export default function ActivosPropios() {
   const envInvalid = !supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('placeholder') || supabaseAnonKey.includes('placeholder');
 
   useEffect(() => {
-    if (envInvalid) {
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+  }, [authLoading, user, router]);
+
+  useEffect(() => {
+    if (envInvalid || !user) {
       setLoading(false);
       return;
     }
@@ -35,7 +45,7 @@ export default function ActivosPropios() {
       fetchActivos(sb);
     };
     initSupabase();
-  }, [envInvalid]);
+  }, [envInvalid, user]);
 
   const fetchActivos = async (sb: any) => {
     if (envInvalid) {

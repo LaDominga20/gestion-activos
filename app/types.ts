@@ -1,5 +1,14 @@
 export type AssetStatus = 'Disponible' | 'Asignado' | 'Mantenimiento' | 'Baja';
 export type ContractStatus = 'Vigente' | 'Vencido' | 'Por Vencer' | 'Pendiente';
+export type UserRole = 'admin' | 'viewer';
+
+export interface User {
+  id: string;
+  email: string;
+  full_name?: string;
+  role: UserRole;
+  created_at?: string;
+}
 
 export interface InventoryItem {
   id?: number;
@@ -24,6 +33,10 @@ export interface InventoryItem {
   fecha_fin?: string;
   situacion_contrato: ContractStatus;
   firma?: string;
+  created_by?: string;
+  created_by_name?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface ActivoPropio {
